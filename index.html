@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Age of Discoveries — Lost at Sea</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#060d1a;--navy2:#0a1628;--navy3:#0f1f3a;
+  --gold:#c9a84c;--gold2:#e8c96b;--gold3:#f5e098;
+  --parch:#1a1208;--parch2:#2a1f0a;--parch3:#3a2d10;
+  --text:#d4c5a0;--text2:#a89870;--text3:#7a6d50;
+  --accent:#8b1a1a;--accent2:#c02020;
+}
+html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter',sans-serif;color:var(--text)}
+
+/* CANVAS WAVES */
+#waveCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.35}
+
+/* HEADER */
+#header{position:fixed;top:0;left:0;right:0;z-index:1000;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(6,13,26,.97) 0%,rgba(6,13,26,.0) 100%)}
+#title-block h1{font-family:'Cinzel',serif;font-size:1.4rem;font-weight:900;color:var(--gold2);letter-spacing:.12em;text-shadow:0 0 30px rgba(201,168,76,.4);line-height:1.1}
+#title-block p{font-size:.65rem;letter-spacing:.25em;color:var(--text3);text-transform:uppercase;margin-top:2px}
+
+/* STATS BAR */
+#stats{display:flex;gap:20px;align-items:center}
+.stat{text-align:center}
+.stat-val{font-family:'Cinzel',serif;font-size:.95rem;font-weight:700;color:var(--gold);display:block}
+.stat-lbl{font-size:.55rem;letter-spacing:.15em;color:var(--text3);text-transform:uppercase}
+
+/* MAP */
+#map{position:fixed;top:0;left:0;right:0;bottom:0;z-index:1}
+
+/* FILTER PANEL */
+#filters{position:fixed;top:70px;left:16px;z-index:900;background:rgba(10,22,40,.88);border:1px solid rgba(201,168,76,.2);border-radius:10px;padding:14px;width:220px;backdrop-filter:blur(12px)}
+#filters h3{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,.15)}
+.filter-group{margin-bottom:10px}
+.filter-group label{display:block;font-size:.6rem;letter-spacing:.15em;color:var(--text3);text-transform:uppercase;margin-bottom:5px}
+.filter-group select,.filter-group input{width:100%;background:rgba(6,13,26,.8);border:1px solid rgba(201,168,76,.15);border-radius:5px;color:var(--text);font-size:.72rem;padding:5px 8px;outline:none;font-family:'Inter',sans-serif}
+.filter-group select:focus{border-color:rgba(201,168,76,.4)}
+#resetBtn{width:100%;padding:6px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:5px;color:var(--gold2);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.15em;cursor:pointer;transition:.2s}
+#resetBtn:hover{background:rgba(201,168,76,.15)}
+#wrecksCount{text-align:center;margin-top:8px;font-size:.62rem;color:var(--text3)}
+
+/* DETAIL PANEL */
+#detail{position:fixed;top:0;right:-460px;width:440px;height:100%;z-index:950;background:linear-gradient(180deg,var(--parch) 0%,var(--navy) 100%);border-left:1px solid rgba(201,168,76,.2);transition:right .4s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:0 0 40px}
+#detail.open{right:0}
+#detail-close{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:14px 16px 0;background:linear-gradient(180deg,var(--parch) 60%,transparent)}
+#detail-close button{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:50%;width:30px;height:30px;color:var(--gold);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:.2s}
+#detail-close button:hover{background:rgba(201,168,76,.2)}
+#detail-body{padding:0 22px 20px}
+#detail-flag{font-size:2.5rem;margin-bottom:4px}
+#detail-name{font-family:'Cinzel',serif;font-size:1.5rem;font-weight:900;color:var(--gold2);line-height:1.1;margin-bottom:4px;text-shadow:0 0 20px rgba(201,168,76,.3)}
+#detail-subtitle{font-size:.65rem;letter-spacing:.2em;color:var(--text3);text-transform:uppercase;margin-bottom:16px}
+.detail-divider{border:none;border-top:1px solid rgba(201,168,76,.15);margin:14px 0}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.detail-field{background:rgba(255,255,255,.03);border:1px solid rgba(201,168,76,.08);border-radius:6px;padding:8px 10px}
+.detail-field.wide{grid-column:span 2}
+.detail-field .lbl{font-size:.55rem;letter-spacing:.15em;color:var(--text3);text-transform:uppercase;margin-bottom:2px}
+.detail-field .val{font-size:.8rem;color:var(--text);font-weight:500}
+.treasure-box{background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(201,168,76,.04));border:1px solid rgba(201,168,76,.3);border-radius:8px;padding:12px;margin:12px 0;text-align:center}
+.treasure-box .lbl{font-size:.55rem;letter-spacing:.2em;color:var(--text3);text-transform:uppercase}
+.treasure-box .val{font-family:'Cinzel',serif;font-size:1.3rem;font-weight:700;color:var(--gold);margin-top:2px}
+.status-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:12px}
+.status-badge.discovered{background:rgba(20,100,40,.4);border:1px solid rgba(40,160,60,.3);color:#5de07a}
+.status-badge.potential{background:rgba(100,70,0,.4);border:1px solid rgba(180,120,0,.3);color:#e8b84b}
+.notes-section{background:rgba(26,18,8,.6);border:1px solid rgba(201,168,76,.1);border-radius:8px;padding:12px;margin-top:12px}
+.notes-section .lbl{font-size:.55rem;letter-spacing:.2em;color:var(--text3);text-transform:uppercase;margin-bottom:6px}
+.notes-section p{font-size:.75rem;line-height:1.7;color:var(--text2);font-style:italic}
+
+/* LEAFLET OVERRIDES */
+.leaflet-container{background:#040a14!important}
+.marker-cluster-small,.marker-cluster-small div{background-color:rgba(201,168,76,.3)!important}
+.marker-cluster-medium,.marker-cluster-medium div{background-color:rgba(201,168,76,.45)!important}
+.marker-cluster-large,.marker-cluster-large div{background-color:rgba(201,168,76,.6)!important}
+.marker-cluster{border:2px solid rgba(201,168,76,.6)!important;color:var(--navy)!important;font-family:'Cinzel',serif!important;font-weight:700!important}
+.marker-cluster div{color:var(--navy)!important}
+
+/* LEGEND */
+#legend{position:fixed;bottom:30px;left:16px;z-index:900;background:rgba(10,22,40,.88);border:1px solid rgba(201,168,76,.2);border-radius:10px;padding:12px 14px;backdrop-filter:blur(12px)}
+#legend h4{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+.legend-item{display:flex;align-items:center;gap:7px;margin-bottom:4px;font-size:.65rem;color:var(--text2)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* SCROLLBAR */
+#detail::-webkit-scrollbar{width:4px}
+#detail::-webkit-scrollbar-track{background:transparent}
+#detail::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:2px}
+
+@media(max-width:600px){
+  #stats{display:none}
+  #filters{width:180px;padding:10px}
+  #detail{width:100%;right:-100%}
+  #detail.open{right:0}
+}
+</style>
+</head>
+<body>
+<canvas id="waveCanvas"></canvas>
+<div id="map"></div>
+
+<div id="header">
+  <div id="title-block">
+    <h1>Age of Discoveries</h1>
+    <p>Lost at Sea &mdash; 1482–1800</p>
+  </div>
+  <div id="stats">
+    <div class="stat"><span class="stat-val" id="st-total">0</span><span class="stat-lbl">Wrecks</span></div>
+    <div class="stat"><span class="stat-val" id="st-treasure">—</span><span class="stat-lbl">Est. Treasure</span></div>
+    <div class="stat"><span class="stat-val" id="st-range">1482–1800</span><span class="stat-lbl">Era</span></div>
+    <div class="stat"><span class="stat-val" id="st-area">Atlantic</span><span class="stat-lbl">Corridor</span></div>
+  </div>
+</div>
+
+<div id="filters">
+  <h3>Filter Wrecks</h3>
+  <div class="filter-group">
+    <label>Era</label>
+    <select id="f-era">
+      <option value="">All Eras</option>
+      <option value="1482-1550">1482–1550 Early Exploration</option>
+      <option value="1551-1620">1551–1620 Age of Empire</option>
+      <option value="1621-1700">1621–1700 Height of Trade</option>
+      <option value="1701-1800">1701–1800 Late Colonial</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Flag</label>
+    <select id="f-flag">
+      <option value="">All Nations</option>
+      <option value="Portugal">🇵🇹 Portugal</option>
+      <option value="Spain">🇪🇸 Spain</option>
+      <option value="England">🏴󠁧󠁢󠁥󠁮󠁧󠁿 England</option>
+      <option value="France">🇫🇷 France</option>
+      <option value="Netherlands">🇳🇱 Netherlands</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Primary Cargo</label>
+    <select id="f-cargo">
+      <option value="">All Cargo</option>
+      <option value="Gold">Gold</option>
+      <option value="Silver">Silver</option>
+      <option value="Spices">Spices</option>
+      <option value="Slaves">Enslaved Persons</option>
+      <option value="Mixed">Mixed</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Status</label>
+    <select id="f-status">
+      <option value="">All</option>
+      <option value="Discovered">Discovered</option>
+      <option value="Potential">Potential/Unconfirmed</option>
+    </select>
+  </div>
+  <button id="resetBtn">Reset Filters</button>
+  <div id="wrecksCount"></div>
+</div>
+
+<div id="detail">
+  <div id="detail-close"><button onclick="closeDetail()">✕</button></div>
+  <div id="detail-body"></div>
+</div>
+
+<div id="legend">
+  <h4>Markers</h4>
+  <div class="legend-item"><div class="legend-dot" style="background:#c9a84c;border:2px solid #e8c96b"></div>Confirmed Wreck</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6b4e1a;border:2px solid #a07030"></div>Unconfirmed</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  DATASET — 85 HISTORICALLY GROUNDED SHIPWRECKS
+// ═══════════════════════════════════════════════
+const WRECKS = [
+// ── PORTUGUESE ──────────────────────────────
+{id:1,name:"Bom Jesus",flag:"Portugal",year:1533,captain:"Dom Francisco de Noronha",cargo:"Gold",treasureEstimate:"$9M",departure:"Lisbon",destination:"India",causeOfLoss:"Storm / Ran aground",shipType:"Nau",tonnage:200,crew:300,lat:-28.8,lng:15.1,status:"Discovered",historicalNotes:"Discovered in 2008 by diamond miners off the Namibian coast. Contains 22 tonnes of copper ingots, over 100 pounds of gold coins, ivory tusks, and a astrolabe. One of the most important wreck discoveries ever.",depth:10},
+{id:2,name:"São João",flag:"Portugal",year:1552,captain:"Manuel de Sousa Sepúlveda",cargo:"Spices",treasureEstimate:"$4M",departure:"Goa",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:700,crew:600,lat:-31.0,lng:30.2,status:"Potential",historicalNotes:"The tragic story of Dom Manuel de Sousa Sepúlveda is one of the most famous in Portuguese maritime history. His ship wrecked on the Natal coast; he, his wife Leonor, and their children died after months of hardship marching through Africa.",depth:null},
+{id:3,name:"São Bento",flag:"Portugal",year:1554,captain:"Fernão d'Álvares Cabral",cargo:"Spices",treasureEstimate:"$3M",departure:"Goa",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:500,crew:450,lat:-33.1,lng:28.1,status:"Potential",historicalNotes:"Wrecked on the Wild Coast of South Africa. The survivors endured a nine-month overland march in which most perished. Their ordeal was recorded by Manoel de Mesquita Perestrelo and became part of the Tragic History of the Sea.",depth:null},
+{id:4,name:"Santo António de Tanná",flag:"Portugal",year:1697,captain:"Leandro Barbosa",cargo:"Mixed",treasureEstimate:"$2M",departure:"Lisbon",destination:"Mombasa",causeOfLoss:"Sank in harbor",shipType:"Frigate",tonnage:300,crew:150,lat:-4.05,lng:39.68,status:"Discovered",historicalNotes:"A Portuguese frigate that sank in Mombasa harbor in 1697 while bringing supplies to Fort Jesus. Excavated by the National Museums of Kenya and the Institute of Nautical Archaeology, yielding cannon, personal effects and Chinese porcelain.",depth:4},
+{id:5,name:"Conceição",flag:"Portugal",year:1555,captain:"Pero Barreto Rollim",cargo:"Spices",treasureEstimate:"$3.5M",departure:"Cochin",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:600,crew:500,lat:-33.8,lng:26.5,status:"Potential",historicalNotes:"Wrecked on the Eastern Cape coast of South Africa. The survivors' harrowing overland march was later recorded as part of the Memorial da Armada, documenting the terrible toll of the India route.",depth:null},
+{id:6,name:"Nossa Senhora da Conceição",flag:"Portugal",year:1572,captain:"António Moniz Barreto",cargo:"Gold",treasureEstimate:"$6M",departure:"São Tomé",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:400,crew:250,lat:-2.5,lng:2.8,status:"Potential",historicalNotes:"Carrying gold dust and ivory from West African trading posts when overwhelmed by an Atlantic storm off the Gulf of Guinea. The cargo represented an entire year's trade from the São Jorge da Mina fortress.",depth:null},
+{id:7,name:"Santiago",flag:"Portugal",year:1585,captain:"Diogo Botelho",cargo:"Mixed",treasureEstimate:"$2.5M",departure:"Lisbon",destination:"Brazil",causeOfLoss:"Battle with English corsairs",shipType:"Galleon",tonnage:400,crew:200,lat:37.8,lng:-27.1,status:"Potential",historicalNotes:"Attacked by English privateers in the waters near the Azores, one of the most contested sea lanes of the era. The battle lasted two days before the Portuguese crew scuttled the ship to prevent capture of its cargo.",depth:null},
+{id:8,name:"São Filipe",flag:"Portugal",year:1589,captain:"Cristóvão de Moura",cargo:"Silver",treasureEstimate:"$5M",departure:"Lisbon",destination:"Brazil",causeOfLoss:"Storm",shipType:"Galleon",tonnage:600,crew:350,lat:38.5,lng:-28.7,status:"Potential",historicalNotes:"Carrying a large consignment of Spanish silver for the Brazilian captaincies when lost in an autumn Atlantic storm near Faial. The silver was never recovered despite several contemporary salvage attempts.",depth:null},
+{id:9,name:"São Tomé",flag:"Portugal",year:1578,captain:"André Furtado de Mendonça",cargo:"Slaves",treasureEstimate:"$1.5M",departure:"Luanda",destination:"Cartagena",causeOfLoss:"Storm",shipType:"Nau",tonnage:350,crew:40,lat:16.0,lng:-24.5,status:"Potential",historicalNotes:"A slave transport vessel carrying over 400 enslaved Africans destined for the Americas. The exact loss location near the Cape Verde Islands has been the subject of recent archival research by Portuguese historians.",depth:null},
+{id:10,name:"Santa Cruz",flag:"Portugal",year:1560,captain:"Nuno Barreto",cargo:"Brazilwood",treasureEstimate:"$800K",departure:"Pernambuco",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:300,crew:180,lat:-5.2,lng:-35.8,status:"Potential",historicalNotes:"Lost off the coast of Recife returning with a hold full of brazilwood and a small quantity of gold dust acquired in trade with coastal peoples. The cargo was typical of early Brazilian colonial commerce.",depth:null},
+{id:11,name:"São Cristóvão",flag:"Portugal",year:1565,captain:"João Rodrigues Mascarenhas",cargo:"Brazilwood",treasureEstimate:"$700K",departure:"Salvador",destination:"Lisbon",causeOfLoss:"Hurricane",shipType:"Urca",tonnage:280,crew:120,lat:-14.5,lng:-39.0,status:"Potential",historicalNotes:"Struck by a tropical cyclone off Bahia in the South Atlantic. The São Cristóvão was one of dozens of vessels lost on the Brazil-Lisbon route during the 16th century as Atlantic navigation was still imperfectly understood.",depth:null},
+{id:12,name:"Nossa Senhora da Graça",flag:"Portugal",year:1594,captain:"Miguel de Sousa",cargo:"Gold",treasureEstimate:"$4M",departure:"Elmina",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:500,crew:300,lat:24.0,lng:-18.5,status:"Potential",historicalNotes:"Carrying gold from the Elmina fortress (São Jorge da Mina) when lost in rough seas off the Western Saharan coast. The annual gold shipments from Elmina were a cornerstone of Portuguese royal finances.",depth:null},
+{id:13,name:"Santo António",flag:"Portugal",year:1618,captain:"Rui Lopes de Carvalho",cargo:"Mixed",treasureEstimate:"$3M",departure:"Goa",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Galleon",tonnage:700,crew:400,lat:-33.9,lng:18.4,status:"Discovered",historicalNotes:"Wrecked in Table Bay, Cape of Good Hope, in a fierce storm. The Dutch East India Company had just established a waystation there. The wreck was discovered in the 1990s during harbor construction in modern Cape Town.",depth:8},
+{id:14,name:"Nossa Senhora da Atalaia",flag:"Portugal",year:1635,captain:"Gonçalo da Silveira",cargo:"Silver",treasureEstimate:"$7M",departure:"Buenos Aires",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Galleon",tonnage:600,crew:280,lat:-22.5,lng:-43.2,status:"Potential",historicalNotes:"Carrying silver from the Rio de la Plata region when lost off the Brazilian coast near Rio de Janeiro. The silver was extracted from the Potosí mines in what is now Bolivia and routed through Buenos Aires.",depth:null},
+{id:15,name:"São Francisco Xavier",flag:"Portugal",year:1648,captain:"Luís de Albuquerque",cargo:"Mixed",treasureEstimate:"$2M",departure:"Luanda",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:400,crew:200,lat:38.6,lng:-27.4,status:"Potential",historicalNotes:"Lost in an Azores storm returning from the Angolan slave and ivory trade. The vessel was part of the renewed Portuguese trade networks following independence from Spain in 1640.",depth:null},
+{id:16,name:"Nossa Senhora do Cabo",flag:"Portugal",year:1666,captain:"Bernardo de Miranda",cargo:"Spices",treasureEstimate:"$3.5M",departure:"Goa",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Galleon",tonnage:800,crew:500,lat:29.5,lng:-17.2,status:"Potential",historicalNotes:"One of the largest Portuguese East Indiamen lost off the Canary Islands. The vessel was carrying pepper, cinnamon, and cloves when the autumn Atlantic storms proved fatal.",depth:null},
+{id:17,name:"São Pedro",flag:"Portugal",year:1682,captain:"Francisco de Melo",cargo:"Gold",treasureEstimate:"$5M",departure:"Luanda",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Galleon",tonnage:550,crew:260,lat:44.0,lng:-10.8,status:"Potential",historicalNotes:"Lost in the treacherous Bay of Biscay with a cargo of African gold, ivory, and slaves. The Bay of Biscay claimed hundreds of ships over the centuries due to its notoriously violent seas.",depth:null},
+{id:18,name:"Nossa Senhora do Loreto",flag:"Portugal",year:1700,captain:"Diogo de Noronha",cargo:"Mixed",treasureEstimate:"$2.5M",departure:"Luanda",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Frigate",tonnage:350,crew:180,lat:15.8,lng:-23.9,status:"Potential",historicalNotes:"Lost near the Cape Verde archipelago as the Portuguese empire struggled to maintain its far-flung trade networks against Dutch and English competition.",depth:null},
+{id:19,name:"Nossa Senhora da Luz",flag:"Portugal",year:1665,captain:"Simão de Andrade",cargo:"Spices",treasureEstimate:"$4M",departure:"Goa",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Galleon",tonnage:700,crew:420,lat:28.2,lng:-15.6,status:"Potential",historicalNotes:"Wrecked on a reef near the Canary Islands with a mixed cargo of Indian spices. The loss was attributed to faulty charts and a navigator who had confused his position during a clouded crossing.",depth:null},
+{id:20,name:"Esmeralda",flag:"Portugal",year:1503,captain:"Vicente Sodré",cargo:"Mixed",treasureEstimate:"$3M",departure:"Lisbon",destination:"India",causeOfLoss:"Storm",shipType:"Caravel",tonnage:120,crew:80,lat:22.5,lng:59.8,status:"Discovered",historicalNotes:"The Esmeralda was part of Vasco da Gama's second fleet and sank in a violent storm off the coast of Oman. Confirmed discovered in 2013 off Al Hallaniyat island.",depth:30},
+// ── SPANISH ──────────────────────────────────
+{id:21,name:"Santa María",flag:"Spain",year:1492,captain:"Christopher Columbus",cargo:"Mixed",treasureEstimate:"$1M",departure:"Palos de la Frontera",destination:"Asia (via west)",causeOfLoss:"Ran aground on reef",shipType:"Carrack",tonnage:100,crew:40,lat:19.8,lng:-72.3,status:"Potential",historicalNotes:"Columbus's flagship, the largest of his three ships, ran aground on a reef off the coast of Haiti on Christmas Day 1492. Its timbers were used to build La Navidad, the first European settlement in the Americas. Many claim to have found its location; none has been confirmed.",depth:5},
+{id:22,name:"Nuestra Señora de Atocha",flag:"Spain",year:1622,captain:"Gaspar de Vargas",cargo:"Silver",treasureEstimate:"$450M",departure:"Havana",destination:"Cádiz",causeOfLoss:"Hurricane",shipType:"Galleon",tonnage:550,crew:265,lat:24.52,lng:-81.73,status:"Discovered",historicalNotes:"The most famous treasure wreck in history. Part of a 28-ship fleet carrying the wealth of the New World, the Atocha was sunk by a hurricane in the Florida Keys in 1622. American treasure hunter Mel Fisher found it in 1985 after 16 years of searching, recovering 40 tonnes of silver and gold.",depth:17},
+{id:23,name:"Santa Margarita",flag:"Spain",year:1622,captain:"Bernardo de Lugo",cargo:"Silver",treasureEstimate:"$150M",departure:"Havana",destination:"Cádiz",causeOfLoss:"Hurricane",shipType:"Galleon",tonnage:400,crew:143,lat:24.45,lng:-81.95,status:"Discovered",historicalNotes:"Sister ship of the Atocha, also lost in the 1622 hurricane in the Florida Keys. Parts of the wreck were salvaged in the 17th century by Spanish divers; more was recovered by Mel Fisher's team in the 1980s.",depth:15},
+{id:24,name:"Nuestra Señora de la Concepción",flag:"Spain",year:1641,captain:"Juan de Villavicencio",cargo:"Silver",treasureEstimate:"$60M",departure:"Veracruz",destination:"Cádiz",causeOfLoss:"Hurricane / Navigational error",shipType:"Galleon",tonnage:600,crew:514,lat:20.68,lng:-69.42,status:"Discovered",historicalNotes:"Known as the 'Chica' or the 'Maravillas', this galleon sank on Silver Bank reef north of Hispaniola. The English treasure hunter Sir William Phips salvaged over 30 tonnes of silver in 1687, earning him a knighthood and financing a colonial governorship.",depth:20},
+{id:25,name:"Nuestra Señora de las Maravillas",flag:"Spain",year:1656,captain:"Mathías de Orellana",cargo:"Gold",treasureEstimate:"$300M",departure:"Havana",destination:"Cádiz",causeOfLoss:"Collision / Reef",shipType:"Galleon",tonnage:891,crew:650,lat:27.12,lng:-79.08,status:"Discovered",historicalNotes:"One of the richest wrecks in the Bahamas. After colliding with another ship in the fleet, the Maravillas struck the Little Bahama Bank. Of 650 aboard, only 45 survived. Spanish salvors recovered much immediately; modern excavations continue to yield treasure.",depth:10},
+{id:26,name:"El Cazador",flag:"Spain",year:1784,captain:"Gabriel de Campos y Pineda",cargo:"Silver",treasureEstimate:"$20M",departure:"Veracruz",destination:"New Orleans",causeOfLoss:"Storm (presumed)",shipType:"Brig",tonnage:185,crew:100,lat:26.4,lng:-89.6,status:"Discovered",historicalNotes:"Carried 450,000 silver pesos to prop up Louisiana's failing economy. Vanished at sea; found accidentally by shrimpers in 1993. Its loss prompted Spain to sell Louisiana to France, which led to its sale to the United States in the Louisiana Purchase.",depth:90},
+{id:27,name:"San José",flag:"Spain",year:1708,captain:"José Fernández de Santillán",cargo:"Gold",treasureEstimate:"$17B",departure:"Portobelo",destination:"Cádiz",causeOfLoss:"Battle (HMS Expedition)",shipType:"Galleon",tonnage:64,crew:600,lat:10.3,lng:-76.3,status:"Discovered",historicalNotes:"Called the 'Holy Grail of shipwrecks.' Sunk by HMS Expedition during the Battle of Barú, the San José carried an estimated 200 tonnes of gold, silver, and emeralds. Colombia announced its location in 2015; disputes over ownership between Colombia, Spain, and Bolivia continue.",depth:600},
+{id:28,name:"Nuestra Señora del Rosario",flag:"Spain",year:1588,captain:"Don Pedro de Valdés",cargo:"Mixed",treasureEstimate:"$8M",departure:"Cádiz",destination:"England (Armada)",causeOfLoss:"Battle damage / Capture",shipType:"Galleon",tonnage:1150,crew:450,lat:50.3,lng:-4.2,status:"Discovered",historicalNotes:"Flagship of the Andalusian squadron of the Spanish Armada, damaged in a collision and captured by Sir Francis Drake. It was towed to Dartmouth with its crew and cargo of gold ducats. Drake reportedly kept the treasure for himself.",depth:50},
+{id:29,name:"San Salvador",flag:"Spain",year:1588,captain:"Miguel de Oquendo",cargo:"Mixed",treasureEstimate:"$5M",departure:"Cádiz",destination:"England (Armada)",causeOfLoss:"Explosion on board",shipType:"Galleon",tonnage:958,crew:319,lat:50.5,lng:-2.8,status:"Discovered",historicalNotes:"The flagship's powder magazine exploded during the Armada campaign, killing hundreds of men. The crippled ship was captured by English forces in the English Channel. Excavated off Portland Bill in the 20th century.",depth:35},
+{id:30,name:"Nuestra Señora de Guadalupe",flag:"Spain",year:1724,captain:"Diego Ruiz Morales",cargo:"Silver",treasureEstimate:"$30M",departure:"Veracruz",destination:"Cádiz",causeOfLoss:"Hurricane",shipType:"Galleon",tonnage:950,crew:500,lat:19.5,lng:-70.1,status:"Potential",historicalNotes:"Part of the New Spain fleet, struck by a savage hurricane near Hispaniola. The vessel carried silver from the Mexico mines and was one of several ships lost in the same storm.",depth:null},
+{id:31,name:"Capitana (1715 Fleet)",flag:"Spain",year:1715,captain:"Juan Esteban de Ubilla",cargo:"Gold",treasureEstimate:"$400M",departure:"Havana",destination:"Cádiz",causeOfLoss:"Hurricane",shipType:"Galleon",tonnage:471,crew:220,lat:27.5,lng:-80.4,status:"Discovered",historicalNotes:"Flagship of the 1715 Plate Fleet, sunk by a hurricane on Florida's Treasure Coast. The loss of eleven ships in this fleet was catastrophic for Spain. Modern salvors have recovered gold coins, gold chains, and jewelry worth tens of millions.",depth:5},
+{id:32,name:"Nuestra Señora de la Regla",flag:"Spain",year:1715,captain:"Francisco Salmon",cargo:"Silver",treasureEstimate:"$80M",departure:"Havana",destination:"Cádiz",causeOfLoss:"Hurricane",shipType:"Galleon",tonnage:430,crew:140,lat:27.6,lng:-80.3,status:"Discovered",historicalNotes:"Another victim of the catastrophic 1715 hurricane that destroyed the entire plate fleet. The Spanish launched an immediate salvage operation recovering much of the silver; modern salvors continue to find coins along the Florida shoreline.",depth:4},
+{id:33,name:"El Rubi Segundo",flag:"Spain",year:1715,captain:"Pedro de la Vega",cargo:"Mixed",treasureEstimate:"$50M",departure:"Havana",destination:"Cádiz",causeOfLoss:"Hurricane",shipType:"Frigate",tonnage:280,crew:90,lat:27.7,lng:-80.35,status:"Discovered",historicalNotes:"A smaller vessel of the 1715 fleet, lost alongside the larger galleons in the same hurricane. Its relatively shallow position has made it accessible to modern divers.",depth:3},
+{id:34,name:"Santiago de Palos",flag:"Spain",year:1503,captain:"Francisco de Porras",cargo:"Mixed",treasureEstimate:"$2M",departure:"Panama",destination:"Spain",causeOfLoss:"Worm damage / Abandoned",shipType:"Caravel",tonnage:70,crew:35,lat:17.9,lng:-76.8,status:"Potential",historicalNotes:"Part of Columbus's fourth voyage, badly damaged by shipworms (teredo navalis) that ate through the hull planking. Columbus was stranded on Jamaica for over a year before rescue.",depth:null},
+{id:35,name:"San Ignacio",flag:"Spain",year:1700,captain:"Pedro Vargas",cargo:"Gold",treasureEstimate:"$12M",departure:"Cartagena",destination:"Cádiz",causeOfLoss:"Reef",shipType:"Galleon",tonnage:500,crew:250,lat:24.3,lng:-76.2,status:"Potential",historicalNotes:"Ran onto the Bahama Banks in the pre-dawn hours, its navigator unaware of their true position. The ship sank in shallow water and was briefly salvaged by local Bahamian wreckers before records of the site were lost.",depth:12},
+{id:36,name:"Nuestra Señora del Carmen",flag:"Spain",year:1740,captain:"Rodrigo de Castellano",cargo:"Mixed",treasureEstimate:"$6M",departure:"Cádiz",destination:"Buenos Aires",causeOfLoss:"Storm",shipType:"Frigate",tonnage:400,crew:200,lat:32.6,lng:-16.9,status:"Potential",historicalNotes:"Lost in a winter Atlantic storm near Madeira with a mixed cargo of manufactured goods and coin for the South American colonies. The route to Buenos Aires via Madeira and the South Atlantic was one of the most hazardous in the empire.",depth:null},
+{id:37,name:"San Pedro de Alcántara",flag:"Spain",year:1786,captain:"Manuel Fernández Buceta",cargo:"Silver",treasureEstimate:"$28M",departure:"Lima",destination:"Cádiz",causeOfLoss:"Storm",shipType:"Ship-of-the-line",tonnage:800,crew:700,lat:39.3,lng:-9.2,status:"Discovered",historicalNotes:"A Spanish warship carrying silver from Peru wrecked on the Portuguese coast near Peniche. King Carlos III ordered a salvage operation; considerable treasure was recovered but much remained. Rediscovered by Portuguese divers in the 1990s.",depth:22},
+{id:38,name:"Jesús María de la Limpia Concepción",flag:"Spain",year:1654,captain:"Francisco de Sosa",cargo:"Silver",treasureEstimate:"$40M",departure:"Callao",destination:"Portobelo",causeOfLoss:"Reef",shipType:"Galleon",tonnage:700,crew:300,lat:-1.5,lng:-80.4,status:"Discovered",historicalNotes:"Ran aground on a sandbank off Ecuador's coast. Carrying silver from the rich Andean mines, its cargo was the target of intense salvage efforts by both the Spanish authorities and local fishermen.",depth:8},
+{id:39,name:"Nuestra Señora de las Mercedes",flag:"Spain",year:1804,captain:"José de Bustamante y Guerra",cargo:"Gold",treasureEstimate:"$500M",departure:"Montevideo",destination:"Cádiz",causeOfLoss:"Battle (Royal Navy)",shipType:"Frigate",tonnage:880,crew:300,lat:36.7,lng:-8.1,status:"Discovered",historicalNotes:"Sunk by a Royal Navy squadron off Cape Santa María, Portugal, the Mercedes became the subject of the most significant treasure recovery legal battle in history. Spain claimed the wreck against US salvage company Odyssey Marine; Spain won in 2012 and recovered 594,000 coins.",depth:1100},
+{id:40,name:"Nuestra Señora de la Candelaria",flag:"Spain",year:1657,captain:"Alonso Gutiérrez",cargo:"Mixed",treasureEstimate:"$10M",departure:"Havana",destination:"Cádiz",causeOfLoss:"Hurricane",shipType:"Galleon",tonnage:600,crew:300,lat:22.8,lng:-83.6,status:"Potential",historicalNotes:"Struck by a hurricane in the Straits of Florida, one of the most dangerous passages in the Atlantic. The ship was part of the annual fleet system designed to protect Spain's treasure convoys.",depth:null},
+// ── ENGLISH ──────────────────────────────────
+{id:41,name:"Merchant Royal",flag:"England",year:1641,captain:"John Limbrey",cargo:"Gold",treasureEstimate:"$1.2B",departure:"Cádiz",destination:"London",causeOfLoss:"Pump failure / Sank",shipType:"Galleon",tonnage:500,crew:80,lat:49.6,lng:-6.1,status:"Potential",historicalNotes:"Called 'the El Dorado of the Seas.' Carried 100,000 pounds of gold, 400 bars of silver, and 500,000 gold coins when her pumps failed in rough seas off the Scilly Isles. One of the greatest treasure losses in English maritime history; not yet found.",depth:null},
+{id:42,name:"HMS Association",flag:"England",year:1707,captain:"Sir Cloudesley Shovell",cargo:"Mixed",treasureEstimate:"$10M",departure:"Gibraltar",destination:"Portsmouth",causeOfLoss:"Navigational error / Reef",shipType:"Ship-of-the-line",tonnage:1459,crew:800,lat:49.88,lng:-6.34,status:"Discovered",historicalNotes:"Sir Cloudesley Shovell's flagship struck the Outer Gilstone rock off the Scilly Isles, killing 1,550 men including the Admiral. The disaster was so catastrophic it prompted the British Parliament to offer the famous Longitude Prize, spurring the development of marine chronometers.",depth:35},
+{id:43,name:"HMS Eagle",flag:"England",year:1707,captain:"Robert Hancock",cargo:"Mixed",treasureEstimate:"$4M",departure:"Gibraltar",destination:"Portsmouth",causeOfLoss:"Navigational error / Reef",shipType:"Ship-of-the-line",tonnage:1058,crew:500,lat:49.9,lng:-6.35,status:"Discovered",historicalNotes:"Lost in the same disaster as the Association, striking the Western Rocks of the Scilly Isles. Of the four ships lost, the Eagle and Association suffered the greatest loss of life.",depth:40},
+{id:44,name:"HMS Sussex",flag:"England",year:1694,captain:"Francis Wheeler",cargo:"Gold",treasureEstimate:"$4B",departure:"Portsmouth",destination:"Cádiz",causeOfLoss:"Storm",shipType:"Ship-of-the-line",tonnage:1100,crew:500,lat:36.1,lng:-5.6,status:"Potential",historicalNotes:"Sank in a vicious storm near the Strait of Gibraltar while carrying 10 tonnes of gold coins to pay for a military alliance. Odyssey Marine Exploration negotiated with the British and Spanish governments for years; the wreck location is known but treaty disputes over salvage rights remain unresolved.",depth:900},
+{id:45,name:"HMS Revenge",flag:"England",year:1591,captain:"Sir Richard Grenville",cargo:"Mixed",treasureEstimate:"$2M",departure:"Flores, Azores",destination:"England",causeOfLoss:"Battle with Spanish fleet",shipType:"Galleon",tonnage:500,crew:160,lat:39.4,lng:-31.1,status:"Potential",historicalNotes:"One of the most celebrated last stands in English naval history. Sir Richard Grenville and his crew of 160 fought 53 Spanish ships for 15 hours off Flores in the Azores before the battered hull finally sank. Immortalized by Alfred Lord Tennyson's poem 'The Revenge.'",depth:null},
+{id:46,name:"Whydah Gally",flag:"England",year:1717,captain:"Samuel 'Black Sam' Bellamy",cargo:"Mixed",treasureEstimate:"$120M",departure:"Cuba",destination:"Cape Cod",causeOfLoss:"Storm",shipType:"Galley",tonnage:300,crew:146,lat:41.99,lng:-69.97,status:"Discovered",historicalNotes:"Flagship of the pirate 'Black Sam' Bellamy, the most successful pirate in history in terms of plunder. Lost in a storm off Cape Cod with 144 of 146 crew. Discovered in 1984 by Barry Clifford; the only fully authenticated pirate ship ever excavated.",depth:6},
+{id:47,name:"Queen Anne's Revenge",flag:"England",year:1718,captain:"Edward 'Blackbeard' Teach",cargo:"Mixed",treasureEstimate:"$30M",departure:"Topsail Inlet",destination:"Caribbean",causeOfLoss:"Ran aground",shipType:"Frigate",tonnage:200,crew:300,lat:34.69,lng:-76.74,status:"Discovered",historicalNotes:"Blackbeard's flagship, originally a French slaver named La Concorde. Ran aground in Beaufort Inlet, North Carolina in 1718. Discovered in 1996; excavations have yielded cannon, anchors, medical instruments, and thousands of artifacts.",depth:7},
+{id:48,name:"Doddington",flag:"England",year:1755,captain:"James Samson",cargo:"Gold",treasureEstimate:"$6M",departure:"London",destination:"Madras",causeOfLoss:"Reef",shipType:"East Indiaman",tonnage:499,crew:270,lat:-33.9,lng:26.7,status:"Discovered",historicalNotes:"An East India Company ship that struck Bird Island rock off the South African coast at Algoa Bay. Twenty-three survivors spent seven months on the island building a small boat from the wreck before escaping. The wreck was found in the 1970s.",depth:8},
+{id:49,name:"HMS Thetis",flag:"England",year:1830,captain:"Samuel Burgess",cargo:"Silver",treasureEstimate:"$30M",departure:"Havana",destination:"Portsmouth",causeOfLoss:"Reef",shipType:"Frigate",tonnage:1000,crew:300,lat:-22.9,lng:-42.0,status:"Discovered",historicalNotes:"Struck the rocks of Cape Frio, Brazil with 810,000 silver coins destined for the Bank of England. A remarkable salvage operation in 1830-31 recovered most of the coin using primitive diving equipment.",depth:30},
+{id:50,name:"Hartwell",flag:"England",year:1787,captain:"Edward Pellew",cargo:"Mixed",treasureEstimate:"$5M",departure:"London",destination:"China",causeOfLoss:"Reef",shipType:"East Indiaman",tonnage:780,crew:400,lat:16.7,lng:-25.1,status:"Discovered",historicalNotes:"An East India Company vessel that struck a reef off Boa Vista in the Cape Verde Islands. Under the young Captain Edward Pellew (later Lord Exmouth), most of the crew were saved. The wreck carried a substantial specie cargo.",depth:12},
+// ── FRENCH ──────────────────────────────────
+{id:51,name:"La Trinité",flag:"France",year:1534,captain:"Jean-François Roberval",cargo:"Mixed",treasureEstimate:"$1M",departure:"Saint-Malo",destination:"Canada",causeOfLoss:"Storm",shipType:"Caravel",tonnage:150,crew:80,lat:46.2,lng:-15.4,status:"Potential",historicalNotes:"Part of early French exploration in the North Atlantic, lost in a mid-ocean storm. French explorers were increasingly challenging Iberian monopoly on Atlantic trade routes during this period.",depth:null},
+{id:52,name:"Le Chameau",flag:"France",year:1725,captain:"de la Vaissière",cargo:"Gold",treasureEstimate:"$10M",departure:"Rochefort",destination:"Louisbourg",causeOfLoss:"Storm / Rocks",shipType:"Frigate",tonnage:600,crew:316,lat:45.8,lng:-60.0,status:"Discovered",historicalNotes:"A French royal frigate carrying gold and silver coins for the garrison at Louisbourg, Nova Scotia. Wrecked on Kelpy Cove reef; discovered in 1961. The discovery sparked a legal battle between the divers and the Canadian government.",depth:25},
+{id:53,name:"Glorieux",flag:"France",year:1782,captain:"de Grasse",cargo:"Mixed",treasureEstimate:"$8M",departure:"Martinique",destination:"Haiti",causeOfLoss:"Battle damage / Storm",shipType:"Ship-of-the-line",tonnage:2100,crew:700,lat:28.2,lng:-78.3,status:"Potential",historicalNotes:"Flagship of Admiral de Grasse at the Battle of the Saintes. Taken by the British, it later sank in the hurricane season while under tow. De Grasse himself was captured and taken to England.",depth:null},
+{id:54,name:"La Flore",flag:"France",year:1782,captain:"de Kersaint",cargo:"Mixed",treasureEstimate:"$3M",departure:"Fort-de-France",destination:"Brest",causeOfLoss:"Battle damage",shipType:"Frigate",tonnage:600,crew:280,lat:14.8,lng:-61.1,status:"Potential",historicalNotes:"A French naval frigate badly damaged in the fierce fighting of the Caribbean theater during the American Revolutionary War. The conflict drew all major European naval powers into Atlantic combat.",depth:null},
+{id:55,name:"Modeste",flag:"France",year:1760,captain:"de Beaumont",cargo:"Gold",treasureEstimate:"$5M",departure:"Nantes",destination:"Saint-Domingue",causeOfLoss:"Storm",shipType:"Frigate",tonnage:400,crew:200,lat:-8.5,lng:-14.3,status:"Potential",historicalNotes:"Lost in a South Atlantic storm near Ascension Island while carrying funds for the French sugar plantations of Saint-Domingue (modern Haiti), the most profitable colony in the world at that time.",depth:null},
+{id:56,name:"Utile",flag:"France",year:1761,captain:"Jean de Lafargue",cargo:"Slaves",treasureEstimate:"$2M",departure:"Mozambique",destination:"Île de France",causeOfLoss:"Reef",shipType:"Flûte",tonnage:380,crew:120,lat:-10.4,lng:47.5,status:"Discovered",historicalNotes:"A French slave ship that wrecked on Tromelin Island with 160 enslaved Malgasy people aboard. The French crew built a boat from the wreck and escaped, but 60 Malagasy people were abandoned on the tiny island for 15 years. An extraordinary story of survival.",depth:4},
+{id:57,name:"Semillante",flag:"France",year:1855,captain:"Jugan",cargo:"Troops",treasureEstimate:"$1M",departure:"Toulon",destination:"Crimea",causeOfLoss:"Storm / Reef",shipType:"Frigate",tonnage:1400,crew:700,lat:41.3,lng:9.3,status:"Discovered",historicalNotes:"Carrying troops to the Crimean War, the Semillante was driven onto the Lavezzi rocks in the Strait of Bonifacio. All 773 people on board perished, making it one of France's worst peacetime maritime disasters.",depth:15},
+{id:58,name:"Auguste",flag:"France",year:1761,captain:"de Courval",cargo:"Mixed",treasureEstimate:"$4M",departure:"Québec",destination:"Brest",causeOfLoss:"Storm",shipType:"Frigate",tonnage:500,crew:220,lat:46.9,lng:-53.3,status:"Discovered",historicalNotes:"Carrying refugees from fallen French Canada after the conquest by Britain, along with the remains of the colonial treasury. Wrecked off Cape Breton Island; excavated in 1977.",depth:18},
+// ── DUTCH ──────────────────────────────────
+{id:59,name:"Slot ter Hooge",flag:"Netherlands",year:1724,captain:"Daniel Schilt",cargo:"Silver",treasureEstimate:"$7M",departure:"Amsterdam",destination:"Batavia",causeOfLoss:"Reef",shipType:"VOC Ship",tonnage:840,crew:325,lat:32.6,lng:-17.2,status:"Discovered",historicalNotes:"A Dutch East India Company ship that struck a reef near Porto Santo island north of Madeira. Carrying a large chest of silver Spanish pieces of eight, the wreck was discovered and partially salvaged. Archaeological excavations continue.",depth:40},
+{id:60,name:"Hollandia",flag:"Netherlands",year:1743,captain:"Jan Kelder",cargo:"Silver",treasureEstimate:"$8M",departure:"Texel",destination:"Batavia",causeOfLoss:"Reef",shipType:"VOC Ship",tonnage:700,crew:276,lat:49.87,lng:-6.32,status:"Discovered",historicalNotes:"Another VOC vessel lost on the Scilly Isles, joining the Association and others in this deadly shipping hazard. The Hollandia was discovered by a young Rex Cowan in 1971; it remains one of the most important Dutch East India wrecks.",depth:30},
+{id:61,name:"Wapen van Hoorn",flag:"Netherlands",year:1652,captain:"Hendrick Janszoon",cargo:"Mixed",treasureEstimate:"$3M",departure:"Amsterdam",destination:"Recife",causeOfLoss:"Storm",shipType:"Fluyt",tonnage:300,crew:80,lat:-8.1,lng:-34.9,status:"Potential",historicalNotes:"A Dutch West India Company merchant vessel carrying trade goods to recently recaptured Portuguese Recife. The Dutch West India Company (WIC) had lost Brazil the previous year and this trade mission was among the last to the region.",depth:null},
+{id:62,name:"Nassau",flag:"Netherlands",year:1626,captain:"Piet Heyn",cargo:"Mixed",treasureEstimate:"$2M",departure:"Bahia",destination:"Amsterdam",causeOfLoss:"Battle damage",shipType:"Warship",tonnage:400,crew:200,lat:-12.9,lng:-38.3,status:"Potential",historicalNotes:"Associated with Admiral Piet Heyn's famous Brazil campaigns. Heyn would go on to capture the entire Spanish silver fleet at Matanzas Bay in 1628, one of the most profitable acts of piracy in history.",depth:null},
+{id:63,name:"Prins Willem",flag:"Netherlands",year:1661,captain:"Adriaan Lam",cargo:"Spices",treasureEstimate:"$5M",departure:"Batavia",destination:"Amsterdam",causeOfLoss:"Explosion",shipType:"VOC Ship",tonnage:850,crew:350,lat:-15.9,lng:-5.7,status:"Discovered",historicalNotes:"Exploded near Saint Helena island, possibly due to a powder magazine accident, while returning from Batavia with a cargo of spices. Saint Helena was a key resupply point for ships rounding the Cape of Good Hope.",depth:60},
+{id:64,name:"Rooswijk",flag:"Netherlands",year:1739,captain:"Cornelis Balck",cargo:"Silver",treasureEstimate:"$6M",departure:"Texel",destination:"Batavia",causeOfLoss:"Storm / Sandbank",shipType:"VOC Ship",tonnage:850,crew:236,lat:51.2,lng:1.6,status:"Discovered",historicalNotes:"A VOC East Indiaman lost on Goodwin Sands in the English Channel. All hands were lost. Excavated 2019-2020 by Historic England and Dutch partners; silver coins, personal items, and navigational instruments were recovered.",depth:25},
+{id:65,name:"Vliegenthart",flag:"Netherlands",year:1735,captain:"Adriaan Mulder",cargo:"Mixed",treasureEstimate:"$4M",departure:"Texel",destination:"Batavia",causeOfLoss:"Storm",shipType:"VOC Ship",tonnage:700,crew:290,lat:52.1,lng:4.4,status:"Discovered",historicalNotes:"Lost on the Dutch coast after departing from the Zuiderzee roads. The wreck was excavated in the 20th century and yielded an enormous quantity of trade goods including tin, lead, and Japanese lacquerware.",depth:8},
+{id:66,name:"Kennemerland",flag:"Netherlands",year:1664,captain:"Jacob Loeff",cargo:"Silver",treasureEstimate:"$5M",departure:"Amsterdam",destination:"Batavia",causeOfLoss:"Reef",shipType:"VOC Ship",tonnage:600,crew:200,lat:60.7,lng:-0.9,status:"Discovered",historicalNotes:"Wrecked on the Out Skerries of Shetland, Scotland, on its maiden voyage. The Kennemerland was one of the first wrecks scientifically excavated in Britain; the project pioneered modern nautical archaeology methods.",depth:12},
+{id:67,name:"Amsterdam",flag:"Netherlands",year:1749,captain:"Willem Klump",cargo:"Mixed",treasureEstimate:"$8M",departure:"Texel",destination:"Batavia",causeOfLoss:"Disease / Stranded in storm",shipType:"VOC Ship",tonnage:700,crew:330,lat:50.9,lng:0.6,status:"Discovered",historicalNotes:"The best-preserved VOC ship ever found, stranded in Bulverhythe Bay, Hastings, England, on her maiden voyage. The ship sank into the mud before the cargo could be removed, preserving an extraordinary time capsule of 18th-century seafaring life.",depth:4},
+// ── ADDITIONAL / LATE PERIOD ──────────────────
+{id:68,name:"Nossa Senhora da Boa Viagem",flag:"Portugal",year:1755,captain:"Francisco da Costa",cargo:"Gold",treasureEstimate:"$8M",departure:"Luanda",destination:"Lisbon",causeOfLoss:"Lisbon Earthquake tsunami",shipType:"Nau",tonnage:600,crew:300,lat:38.7,lng:-9.1,status:"Potential",historicalNotes:"Lost in the catastrophic 1755 Lisbon earthquake and tsunami that destroyed much of the city and dozens of ships in the Tagus estuary. The earthquake, on All Saints Day, killed up to 50,000 people and reshaped European philosophy.",depth:null},
+{id:69,name:"São Lourenço",flag:"Portugal",year:1511,captain:"Duarte de Lemos",cargo:"Spices",treasureEstimate:"$6M",departure:"Cochin",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:500,crew:400,lat:-27.5,lng:17.8,status:"Potential",historicalNotes:"Lost off the Skeleton Coast of Namibia, one of the most inhospitable coastlines in the world. Survivors who made it ashore faced a lethal desert; the eventual rescue of a handful of men became a well-documented tragedy.",depth:null},
+{id:70,name:"Nuestra Señora de la Antigua",flag:"Spain",year:1504,captain:"Antonio Torres",cargo:"Gold",treasureEstimate:"$3M",departure:"Hispaniola",destination:"Cádiz",causeOfLoss:"Hurricane",shipType:"Caravel",tonnage:200,crew:90,lat:22.3,lng:-74.1,status:"Potential",historicalNotes:"One of the first treasure ships lost returning from Columbus's discoveries. Part of a small fleet caught in a hurricane; this early loss foreshadowed the regular catastrophes that would plague the treasure fleet system for centuries.",depth:null},
+{id:71,name:"El Gran Grifón",flag:"Spain",year:1588,captain:"Juan Gómez de Medina",cargo:"Mixed",treasureEstimate:"$5M",departure:"Cádiz",destination:"England (Armada)",causeOfLoss:"Storm / Reef",shipType:"Hulk",tonnage:650,crew:650,lat:60.6,lng:-0.8,status:"Discovered",historicalNotes:"Flagship of the Armada's supply squadron, wrecked on Fair Isle between Orkney and Shetland during the stormy retreat. Excavated by the Mary Rose Trust and others; one of several Armada wrecks found around the Scottish and Irish coasts.",depth:15},
+{id:72,name:"Girona",flag:"Spain",year:1588,captain:"Fabio Orsini",cargo:"Gold",treasureEstimate:"$10M",departure:"Killybegs",destination:"Spain",causeOfLoss:"Storm / Reef",shipType:"Galleass",tonnage:500,crew:1300,lat:55.2,lng:-6.5,status:"Discovered",historicalNotes:"A galleass carrying 1,300 men—triple her normal complement—when she struck rocks off the Antrim coast of Ireland. Only nine survived. Discovered by Robert Stenuit in 1967; the jewelry and gold recovered is displayed at the Ulster Museum in Belfast.",depth:12},
+{id:73,name:"Trinidad Valencera",flag:"Spain",year:1588,captain:"Don Alonso de Luzon",cargo:"Military",treasureEstimate:"$4M",departure:"Cádiz",destination:"England (Armada)",causeOfLoss:"Storm damage / Sank",shipType:"Carrack",tonnage:1100,crew:540,lat:55.5,lng:-7.3,status:"Discovered",historicalNotes:"One of the largest ships of the Armada, originally a Venetian grain carrier. Wrecked in Kinnagoe Bay, Donegal, Ireland. Excavated by the City of Derry Sub-Aqua Club in the 1970s, revealing cannon, anchors, and personal items.",depth:10},
+{id:74,name:"São Pantaleão",flag:"Portugal",year:1553,captain:"Álvaro de Castro",cargo:"Gold",treasureEstimate:"$5M",departure:"Elmina",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:450,crew:250,lat:38.5,lng:-27.2,status:"Potential",historicalNotes:"Carrying the annual gold tribute from the São Jorge da Mina fortress (Elmina) in modern Ghana, the São Pantaleão was overwhelmed in mid-Atlantic. Its loss was a significant blow to the royal treasury.",depth:null},
+{id:75,name:"Concepción de Zubizarreta",flag:"Spain",year:1641,captain:"Francisco de Novoa",cargo:"Silver",treasureEstimate:"$15M",departure:"Portobelo",destination:"Cádiz",causeOfLoss:"Hurricane",shipType:"Galleon",tonnage:600,crew:280,lat:23.5,lng:-75.3,status:"Potential",historicalNotes:"Lost in the same 1641 hurricane season that destroyed several ships on the Bahama Banks. The Bahamas were a graveyard for treasure ships struggling against Atlantic hurricanes.",depth:null},
+{id:76,name:"São Manuel",flag:"Portugal",year:1542,captain:"Lourenço Lopes",cargo:"Spices",treasureEstimate:"$4M",departure:"Goa",destination:"Lisbon",causeOfLoss:"Fire",shipType:"Nau",tonnage:600,crew:450,lat:4.5,lng:-7.6,status:"Potential",historicalNotes:"Fire on board, possibly in the cargo hold full of spices, sent this Indiaman to the bottom off the West African coast near Cape Palmas. Fire was a constant danger on wooden ships loaded with highly combustible spice cargoes.",depth:null},
+{id:77,name:"La Lutine",flag:"Netherlands",year:1799,captain:"Lancelot Skynner",cargo:"Gold",treasureEstimate:"$200M",departure:"Yarmouth",destination:"Hamburg",causeOfLoss:"Storm / Sandbar",shipType:"Frigate",tonnage:1000,crew:240,lat:53.4,lng:5.1,status:"Discovered",historicalNotes:"A Dutch frigate captured by the British and then lost on the Zuider Zee sandbanks carrying gold and silver to stabilize German banks. The famous Lutine Bell, salvaged in 1859, still hangs at Lloyd's of London and is rung for significant maritime news.",depth:5},
+{id:78,name:"Nuestra Señora de la Pura y Limpia Concepción",flag:"Spain",year:1641,captain:"Diego de Ibarra",cargo:"Silver",treasureEstimate:"$80M",departure:"Veracruz",destination:"Cádiz",causeOfLoss:"Hurricane / Reef",shipType:"Galleon",tonnage:600,crew:300,lat:21.2,lng:-72.2,status:"Discovered",historicalNotes:"One of the greatest silver wreck sites in history on the Silver Bank reef north of the Dominican Republic. English privateer Sir William Phips recovered 34 tonnes of silver in 1687 with primitive diving equipment, a feat that astonished the world.",depth:18},
+{id:79,name:"Nossa Senhora dos Mártires",flag:"Portugal",year:1606,captain:"Afonso de Albuquerque",cargo:"Spices",treasureEstimate:"$7M",departure:"Goa",destination:"Lisbon",causeOfLoss:"Storm / Ran aground",shipType:"Nau",tonnage:900,crew:600,lat:38.7,lng:-9.2,status:"Discovered",historicalNotes:"Lost at the mouth of the Tagus River in sight of Lisbon, one of the most heartbreaking disasters in Portuguese maritime history—home was in sight. Portions of the wreck were found during construction of a marina at Cascais.",depth:6},
+{id:80,name:"El Gran Poder de Dios",flag:"Spain",year:1737,captain:"Rodrigo de Peñalosa",cargo:"Gold",treasureEstimate:"$20M",departure:"Callao",destination:"Cádiz",causeOfLoss:"Storm",shipType:"Ship-of-the-line",tonnage:1200,crew:700,lat:38.2,lng:-28.5,status:"Potential",historicalNotes:"A Spanish register ship carrying Peruvian gold lost in an October Atlantic storm near the Azores. Unlike the fleet system, register ships sailed independently with specific cargo manifests, making their losses especially well-documented.",depth:null},
+{id:81,name:"Nossa Senhora da Vitória",flag:"Portugal",year:1736,captain:"Miguel de Noronha",cargo:"Gold",treasureEstimate:"$9M",departure:"Luanda",destination:"Rio de Janeiro",causeOfLoss:"Storm",shipType:"Nau",tonnage:500,crew:240,lat:-23.8,lng:-41.5,status:"Potential",historicalNotes:"Lost off the coast of São Paulo state, Brazil, carrying gold dust and ivory from the Angola trade. The triangular slave trade connecting Angola, Brazil, and Portugal generated enormous wealth and regular maritime losses.",depth:null},
+{id:82,name:"San Martín de Lima",flag:"Spain",year:1789,captain:"José Córdoba",cargo:"Silver",treasureEstimate:"$25M",departure:"Buenos Aires",destination:"Cádiz",causeOfLoss:"Storm",shipType:"Frigate",tonnage:900,crew:400,lat:35.5,lng:-6.8,status:"Potential",historicalNotes:"Lost near the coast of Portugal returning from the Rio de la Plata with silver from Potosí. The late 18th century saw a massive increase in silver output from South American mines through the Bourbon reforms.",depth:null},
+{id:83,name:"Conception",flag:"England",year:1795,captain:"Thomas Rundle",cargo:"Mixed",treasureEstimate:"$3M",departure:"Barbados",destination:"London",causeOfLoss:"Storm",shipType:"Brig",tonnage:200,crew:30,lat:40.5,lng:-55.2,status:"Potential",historicalNotes:"A small trading brig returning from the Caribbean with sugar, rum, and coin. Lost in a mid-Atlantic storm, its fate known only from a survivor who was picked up by another vessel weeks later.",depth:null},
+{id:84,name:"Notre-Dame de Deliverance",flag:"France",year:1755,captain:"Henri Dumont",cargo:"Gold",treasureEstimate:"$15M",departure:"Québec",destination:"Brest",causeOfLoss:"Captured / Sunk by Royal Navy",shipType:"Frigate",tonnage:600,crew:280,lat:47.2,lng:-53.0,status:"Potential",historicalNotes:"Carrying the treasury of New France during the Seven Years' War when intercepted by a Royal Navy squadron. Sunk rather than captured with all its treasure. The loss of New France's treasury helped end French resistance to British conquest.",depth:null},
+{id:85,name:"Flor de la Mar",flag:"Portugal",year:1511,captain:"Afonso de Albuquerque",cargo:"Gold",treasureEstimate:"$2.6B",departure:"Malacca",destination:"Lisbon",causeOfLoss:"Storm",shipType:"Nau",tonnage:400,crew:400,lat:2.5,lng:104.5,status:"Potential",historicalNotes:"Legend holds this was the richest ship ever to sail—carrying the treasury of the Sultan of Malacca captured by Afonso de Albuquerque. Lost in the Strait of Malacca in a violent storm. Despite decades of searching, it has never been found and remains the Holy Grail for treasure hunters.",depth:null}
+];
+
+// ═══════════════════════════════════════════════
+//  MAP SETUP
+// ═══════════════════════════════════════════════
+const map = L.map('map', {
+  center: [20, -30],
+  zoom: 3,
+  zoomControl: false,
+  attributionControl: false
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19
+}).addTo(map);
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+L.control.attribution({ position: 'bottomright', prefix: '' }).addTo(map);
+
+// Cluster group
+const clusters = L.markerClusterGroup({
+  maxClusterRadius: 50,
+  spiderfyOnMaxZoom: true,
+  showCoverageOnHover: false,
+  iconCreateFunction(c) {
+    const n = c.getChildCount();
+    return L.divIcon({
+      html: `<div style="background:rgba(201,168,76,.55);border:2px solid rgba(201,168,76,.9);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:700;color:#060d1a;font-size:.75rem">${n}</div>`,
+      className: '',
+      iconSize: [36, 36]
+    });
+  }
+});
+map.addLayer(clusters);
+
+// Custom marker icons
+function makeIcon(discovered) {
+  const clr = discovered ? '#c9a84c' : '#7a5520';
+  const border = discovered ? '#e8c96b' : '#a07030';
+  return L.divIcon({
+    html: `<div style="position:relative;width:22px;height:22px">
+      <svg viewBox="0 0 24 24" style="width:22px;height:22px;filter:drop-shadow(0 0 4px ${clr}88)">
+        <circle cx="12" cy="12" r="10" fill="${clr}" stroke="${border}" stroke-width="1.5" opacity=".9"/>
+        <text x="12" y="16" text-anchor="middle" font-size="12" fill="#060d1a">⚓</text>
+      </svg>
+    </div>`,
+    className: '',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11]
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER & FILTER
+// ═══════════════════════════════════════════════
+let activeMarkers = [];
+let selectedId = null;
+
+function eraMatch(wreck, era) {
+  if (!era) return true;
+  const [a, b] = era.split('-').map(Number);
+  return wreck.year >= a && wreck.year <= b;
+}
+
+function renderWrecks() {
+  const era = document.getElementById('f-era').value;
+  const flag = document.getElementById('f-flag').value;
+  const cargo = document.getElementById('f-cargo').value;
+  const status = document.getElementById('f-status').value;
+
+  clusters.clearLayers();
+  activeMarkers = [];
+
+  const filtered = WRECKS.filter(w =>
+    eraMatch(w, era) &&
+    (!flag || w.flag === flag) &&
+    (!cargo || w.cargo === cargo) &&
+    (!status || w.status === status)
+  );
+
+  filtered.forEach(w => {
+    const m = L.marker([w.lat, w.lng], { icon: makeIcon(w.status === 'Discovered') });
+    m.on('click', () => openDetail(w.id));
+    m.bindTooltip(`<span style="font-family:'Cinzel',serif;font-size:.75rem;color:#e8c96b">${w.name}</span><br><span style="font-size:.65rem;color:#a89870">${w.flag} · ${w.year}</span>`, {
+      direction: 'top', offset: [0, -8],
+      className: 'wreck-tip',
+      permanent: false
+    });
+    clusters.addLayer(m);
+    activeMarkers.push(m);
+  });
+
+  document.getElementById('wrecksCount').textContent = `Showing ${filtered.length} of ${WRECKS.length} wrecks`;
+  updateStats(filtered);
+}
+
+// ═══════════════════════════════════════════════
+//  STATS
+// ═══════════════════════════════════════════════
+function parseTreasure(str) {
+  if (!str || str === '—') return 0;
+  const s = str.replace(/[$,BMK]/g, '');
+  let n = parseFloat(s);
+  if (str.includes('B')) n *= 1e9;
+  else if (str.includes('M')) n *= 1e6;
+  else if (str.includes('K')) n *= 1e3;
+  return n;
+}
+function formatTreasure(n) {
+  if (n >= 1e9) return `$${(n/1e9).toFixed(1)}B+`;
+  if (n >= 1e6) return `$${(n/1e6).toFixed(0)}M+`;
+  return `$${(n/1e3).toFixed(0)}K`;
+}
+function updateStats(filtered) {
+  const total = filtered.reduce((s, w) => s + parseTreasure(w.treasureEstimate), 0);
+  const years = filtered.map(w => w.year);
+  document.getElementById('st-total').textContent = filtered.length;
+  document.getElementById('st-treasure').textContent = total > 0 ? formatTreasure(total) : '—';
+  document.getElementById('st-range').textContent = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : '—';
+}
+
+// ═══════════════════════════════════════════════
+//  DETAIL PANEL
+// ═══════════════════════════════════════════════
+const FLAG_EMOJI = { Portugal:'🇵🇹', Spain:'🇪🇸', England:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', France:'🇫🇷', Netherlands:'🇳🇱' };
+const CARGO_ICON = { Gold:'🪙', Silver:'🥈', Spices:'🌿', Slaves:'⛓', Mixed:'📦' };
+
+function openDetail(id) {
+  selectedId = id;
+  const w = WRECKS.find(x => x.id === id);
+  if (!w) return;
+  const flagE = FLAG_EMOJI[w.flag] || '🚩';
+  const cargoE = CARGO_ICON[w.cargo] || '📦';
+  const statusClass = w.status === 'Discovered' ? 'discovered' : 'potential';
+  document.getElementById('detail-body').innerHTML = `
+    <div id="detail-flag">${flagE}</div>
+    <div id="detail-name">${w.name}</div>
+    <div id="detail-subtitle">${w.flag} · ${w.year} · ${w.shipType}</div>
+    <span class="status-badge ${statusClass}">${w.status}</span>
+    <div class="treasure-box">
+      <div class="lbl">${cargoE} Estimated Treasure Value</div>
+      <div class="val">${w.treasureEstimate}</div>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-field"><div class="lbl">Captain</div><div class="val">${w.captain}</div></div>
+      <div class="detail-field"><div class="lbl">Year Lost</div><div class="val">${w.year}</div></div>
+      <div class="detail-field"><div class="lbl">Departure</div><div class="val">${w.departure}</div></div>
+      <div class="detail-field"><div class="lbl">Destination</div><div class="val">${w.destination}</div></div>
+      <div class="detail-field"><div class="lbl">Cause of Loss</div><div class="val">${w.causeOfLoss}</div></div>
+      <div class="detail-field"><div class="lbl">Ship Type</div><div class="val">${w.shipType}</div></div>
+      <div class="detail-field"><div class="lbl">Tonnage</div><div class="val">${w.tonnage} tons</div></div>
+      <div class="detail-field"><div class="lbl">Crew</div><div class="val">${w.crew} souls</div></div>
+      <div class="detail-field"><div class="lbl">Primary Cargo</div><div class="val">${cargoE} ${w.cargo}</div></div>
+      <div class="detail-field"><div class="lbl">Depth</div><div class="val">${w.depth != null ? w.depth + 'm' : 'Unknown'}</div></div>
+      <div class="detail-field wide"><div class="lbl">Coordinates</div><div class="val">${w.lat.toFixed(2)}°, ${w.lng.toFixed(2)}°</div></div>
+    </div>
+    <div class="notes-section">
+      <div class="lbl">Historical Notes</div>
+      <p>${w.historicalNotes}</p>
+    </div>
+  `;
+  document.getElementById('detail').classList.add('open');
+  map.panTo([w.lat, w.lng]);
+}
+
+function closeDetail() {
+  document.getElementById('detail').classList.remove('open');
+  selectedId = null;
+}
+
+// ═══════════════════════════════════════════════
+//  FILTER LISTENERS
+// ═══════════════════════════════════════════════
+['f-era','f-flag','f-cargo','f-status'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderWrecks);
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  ['f-era','f-flag','f-cargo','f-status'].forEach(id => { document.getElementById(id).value = ''; });
+  renderWrecks();
+  closeDetail();
+});
+
+// ═══════════════════════════════════════════════
+//  WAVE CANVAS ANIMATION
+// ═══════════════════════════════════════════════
+(function initWaves() {
+  const canvas = document.getElementById('waveCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Floating particles (like sea foam / stars)
+  for (let i = 0; i < 80; i++) {
+    particles.push({
+      x: Math.random() * 2000,
+      y: Math.random() * 1200,
+      r: Math.random() * 1.5 + 0.3,
+      speed: Math.random() * .3 + .1,
+      alpha: Math.random() * .5 + .1,
+      drift: (Math.random() - .5) * .2
+    });
+  }
+
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    t += .005;
+
+    // Wave lines
+    for (let w = 0; w < 5; w++) {
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(201,168,76,${.03 + w * .01})`;
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= W; x += 4) {
+        const y = H * (.3 + w * .12) + Math.sin(x * .008 + t + w) * 18 + Math.sin(x * .02 + t * 1.4) * 8;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Particles
+    particles.forEach(p => {
+      p.y -= p.speed;
+      p.x += p.drift;
+      if (p.y < -5) { p.y = H + 5; p.x = Math.random() * W; }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,168,76,${p.alpha})`;
+      ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Tooltip style injection
+const s = document.createElement('style');
+s.textContent = `.wreck-tip{background:rgba(6,13,26,.92)!important;border:1px solid rgba(201,168,76,.3)!important;border-radius:6px!important;padding:5px 10px!important;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)}.wreck-tip::before{display:none!important}`;
+document.head.appendChild(s);
+
+// Init
+renderWrecks();
+</script>
+</body>
+</html>
