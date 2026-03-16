@@ -93,11 +93,34 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
 #detail::-webkit-scrollbar-track{background:transparent}
 #detail::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:2px}
 
+/* ABOUT BUTTON */
+#about-btn{background:none;border:1px solid rgba(201,168,76,.2);border-radius:4px;color:var(--text3);font-size:.6rem;letter-spacing:.1em;padding:3px 8px;cursor:pointer;transition:.2s;white-space:nowrap}
+#about-btn:hover{border-color:rgba(201,168,76,.5);color:var(--gold2)}
+
+/* FOOTER NOTE */
+#footer-note{position:fixed;bottom:4px;left:50%;transform:translateX(-50%);z-index:800;font-size:.52rem;color:var(--text3);letter-spacing:.05em;opacity:.5;pointer-events:none;white-space:nowrap}
+
+/* ABOUT MODAL */
+#about-modal{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(6,13,26,.75);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .3s}
+#about-modal.open{opacity:1;pointer-events:all}
+#about-box{background:linear-gradient(160deg,var(--navy3) 0%,var(--navy2) 100%);border:1px solid rgba(201,168,76,.25);border-radius:12px;padding:28px 30px;max-width:540px;width:90%;max-height:80vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+#about-box::-webkit-scrollbar{width:3px}
+#about-box::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:2px}
+#about-box h2{font-family:'Cinzel',serif;font-size:.85rem;font-weight:700;color:var(--gold2);letter-spacing:.18em;text-transform:uppercase;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(201,168,76,.15)}
+#about-box p{font-size:.72rem;line-height:1.8;color:var(--text2)}
+#about-box p+p{margin-top:12px}
+#about-box .src-list{margin:10px 0 0 0;padding:0;list-style:none}
+#about-box .src-list li{font-size:.68rem;color:var(--text3);line-height:1.6;padding-left:10px;position:relative}
+#about-box .src-list li::before{content:'·';position:absolute;left:0;color:var(--gold)}
+#about-close{position:absolute;top:12px;right:14px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:50%;width:26px;height:26px;color:var(--gold);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:.2s}
+#about-close:hover{background:rgba(201,168,76,.18)}
+
 @media(max-width:600px){
   #stats{display:none}
   #filters{width:180px;padding:10px}
   #detail{width:100%;right:-100%}
   #detail.open{right:0}
+  #footer-note{display:none}
 }
 </style>
 </head>
@@ -115,6 +138,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
     <div class="stat"><span class="stat-val" id="st-treasure">—</span><span class="stat-lbl">Est. Treasure</span></div>
     <div class="stat"><span class="stat-val" id="st-range">1482–1855</span><span class="stat-lbl">Era</span></div>
     <div class="stat"><span class="stat-val" id="st-area">Atlantic</span><span class="stat-lbl">Corridor</span></div>
+    <button id="about-btn" onclick="openAbout()">ⓘ About the Data</button>
   </div>
 </div>
 
@@ -179,6 +203,29 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
   <h4>Markers</h4>
   <div class="legend-item"><div class="legend-dot" style="background:#c9a84c;border:2px solid #e8c96b"></div>Confirmed Wreck</div>
   <div class="legend-item"><div class="legend-dot" style="background:#6b4e1a;border:2px solid #a07030"></div>Unconfirmed</div>
+</div>
+
+<div id="footer-note">Historical estimates · Not for navigation or commercial use · &copy; Claude.ai / Anthropic</div>
+
+<div id="about-modal" onclick="if(event.target===this)closeAbout()">
+  <div id="about-box">
+    <button id="about-close" onclick="closeAbout()">✕</button>
+    <h2>About the Data</h2>
+    <p>Historical data compiled from publicly available maritime records including the UNESCO Underwater Cultural Heritage database, Wrecksite.eu, NOAA shipwreck records, Portuguese Arquivo Nacional Torre do Tombo, Spanish Archivo General de Indias, Lloyd's casualty records, and published academic maritime history sources.</p>
+    <p>Shipwreck locations marked as <strong style="color:var(--gold2)">Confirmed</strong> are based on documented discoveries. Locations marked as <strong style="color:var(--text2)">Potential</strong> are historically plausible estimates based on known trade routes, fleet records, and maritime casualty reports of the period.</p>
+    <p>Treasure estimates are speculative approximations based on typical cargo values for the era and route — not verified appraisals.</p>
+    <p style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(201,168,76,.12)">This dataset was researched and compiled by <strong style="color:var(--gold)">Claude.ai (Anthropic)</strong> as an educational and historical exploration tool. It is not intended for commercial salvage, academic citation without independent verification, or navigational use.</p>
+    <p>For verified records, consult UNESCO, Wrecksite.eu, or national maritime heritage authorities.</p>
+    <ul class="src-list" style="margin-top:16px">
+      <li>UNESCO Underwater Cultural Heritage</li>
+      <li>Wrecksite.eu</li>
+      <li>NOAA Office of National Marine Sanctuaries</li>
+      <li>Arquivo Nacional Torre do Tombo (Portugal)</li>
+      <li>Archivo General de Indias (Spain)</li>
+      <li>Lloyd's of London casualty records</li>
+      <li>Published academic maritime history sources</li>
+    </ul>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -678,6 +725,17 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 const s = document.createElement('style');
 s.textContent = `.wreck-tip{background:rgba(6,13,26,.92)!important;border:1px solid rgba(201,168,76,.3)!important;border-radius:6px!important;padding:5px 10px!important;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)}.wreck-tip::before{display:none!important}`;
 document.head.appendChild(s);
+
+// ═══════════════════════════════════════════════
+//  ABOUT MODAL
+// ═══════════════════════════════════════════════
+function openAbout() {
+  document.getElementById('about-modal').classList.add('open');
+}
+function closeAbout() {
+  document.getElementById('about-modal').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAbout(); });
 
 // Init
 renderWrecks();
