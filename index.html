@@ -210,7 +210,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
   /* FILTERS */
   #filters{width:90vw;max-width:300px;padding:10px;display:none;top:120px!important}
   #filters.mobile-open{display:block}
-  #filter-toggle{display:flex}
+  #filter-toggle{display:flex;position:fixed;top:60px;left:8px;z-index:901}
+  #nav-controls{z-index:1003}
   /* DETAIL PANEL — full screen via transform */
   #detail{position:fixed;top:0;left:0 !important;right:auto !important;width:100vw !important;height:100vh;transform:translateX(100%);transition:transform .3s ease;z-index:900;overflow-y:auto}
   #detail.open{transform:translateX(0)}
