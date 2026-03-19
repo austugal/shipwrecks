@@ -193,30 +193,32 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
 /* FILTER TOGGLE BUTTON (mobile only) */
 #filter-toggle{display:none;position:fixed;top:70px;left:16px;z-index:901;background:rgba(10,22,40,.88);border:1px solid rgba(201,168,76,.25);border-radius:8px;padding:0 14px;color:var(--gold2);font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.1em;cursor:pointer;min-height:44px;min-width:44px;backdrop-filter:blur(8px);align-items:center;gap:6px;touch-action:manipulation}
 @media(max-width:768px){
-  /* HEADER — stack title then scrollable stats row */
-  #header{flex-direction:column;align-items:stretch;padding:6px 10px 0;gap:0}
-  #title-block h1{font-size:1rem;letter-spacing:.07em}
-  #title-block p{font-size:.55rem;letter-spacing:.15em}
-  #stats{display:flex;flex-direction:row;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 6px;flex-wrap:nowrap}
-  #stats .stat{flex-shrink:0}
-  #stats .stat-val{font-size:.72rem}
-  #stats .stat-lbl{font-size:.42rem}
-  /* Nav controls pinned top-right, outside scroll area */
-  #nav-controls{position:fixed;top:6px;right:8px;z-index:1002;gap:3px;flex-wrap:nowrap}
-  .nav-btn{font-size:.58rem;padding:2px 5px;min-height:36px;min-width:36px}
-  #about-btn{min-height:36px}
+  /* HEADER — column: title / nav row / stats row */
+  #header{flex-direction:column;align-items:stretch;padding:5px 10px 4px;gap:2px}
+  #title-block{order:1}
+  #title-block h1{font-size:.95rem;letter-spacing:.06em}
+  #title-block p{display:none}
+  /* Stats container holds both .stat items and #nav-controls */
+  #stats{order:2;display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:2px 0}
+  /* Nav controls: pull to front of the wrap, full row */
+  #nav-controls{order:-1;width:100%;gap:3px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .nav-btn{font-size:.55rem;padding:3px 6px;min-height:36px;min-width:32px;flex-shrink:0}
+  /* Stat values follow on next wrap line */
+  .stat{flex-shrink:0}
+  .stat-val{font-size:.7rem}
+  .stat-lbl{font-size:.4rem}
   /* FILTERS */
   #filters{width:90vw;max-width:300px;padding:10px;display:none;top:120px!important}
   #filters.mobile-open{display:block}
   #filter-toggle{display:flex}
-  /* DETAIL PANEL — full screen via transform (no right-based slide) */
+  /* DETAIL PANEL — full screen via transform */
   #detail{position:fixed;top:0;left:0 !important;right:auto !important;width:100vw !important;height:100vh;transform:translateX(100%);transition:transform .3s ease;z-index:900;overflow-y:auto}
   #detail.open{transform:translateX(0)}
-  /* CLOSE BUTTON */
-  #close-btn{position:fixed;top:12px;left:12px;right:auto;z-index:999999;width:44px;height:44px;display:none;background:rgba(10,20,40,.9);border:2px solid #c9a84c;border-radius:50%;color:#c9a84c;font-size:1.3rem;pointer-events:auto!important;touch-action:manipulation;-webkit-tap-highlight-color:transparent;align-items:center;justify-content:center}
-  /* ARMILLARY — show small in bottom-right */
-  #astrolabe-wrap{display:block!important;position:fixed;top:auto;bottom:60px;right:8px;width:70px;height:70px;z-index:800;opacity:.7}
-  #astrCanvas{width:70px!important;height:70px!important}
+  /* CLOSE BUTTON — top-right corner (clear of title/flag top-left) */
+  #close-btn{position:fixed;top:12px;left:auto;right:12px;z-index:999999;width:44px;height:44px;display:none;background:rgba(10,20,40,.9);border:2px solid #c9a84c;border-radius:50%;color:#c9a84c;font-size:1.3rem;pointer-events:auto!important;touch-action:manipulation;-webkit-tap-highlight-color:transparent;align-items:center;justify-content:center}
+  /* ARMILLARY — show small bottom-right */
+  #astrolabe-wrap{display:block!important;position:fixed;top:auto;bottom:70px;right:8px;width:65px;height:65px;z-index:800;opacity:.8}
+  #astrCanvas{width:65px!important;height:65px!important}
   /* OTHER */
   #footer-note{display:none}
   #timeline{display:none}
@@ -1307,7 +1309,7 @@ map.on('drag',()=>{ const now=Date.now(); if(now-lastSplash>300){ lastSplash=now
 // ═══════════════════════════════════════════════
 (function initArmillarySphere(){
   if(typeof THREE==='undefined') return;
-  const W=window.innerWidth<=768?70:160;
+  const W=window.innerWidth<=768?65:160;
   const canvas=document.getElementById('astrCanvas');
   const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
   renderer.setSize(W,W); renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
