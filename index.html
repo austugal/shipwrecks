@@ -1,9 +1,19 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Age of Discoveries — Lost at Sea</title>
+<meta name="description" content="Interactive map of 350+ shipwrecks from the Age of Discoveries (1482-1855). Portuguese, Spanish, Dutch and pirate vessels lost across the Atlantic, Indian Ocean and Pacific. Created by Tiago Fitas." />
+<meta name="keywords" content="shipwrecks, age of discoveries, Portuguese exploration, lost ships, maritime history, galleons, pirates, treasure ships, interactive map" />
+<meta name="author" content="Tiago Fitas" />
+<meta name="robots" content="index, follow" />
+<meta property="og:title" content="Age of Discoveries - Lost at Sea - Interactive Shipwreck Map" />
+<meta property="og:description" content="350+ shipwrecks from 1482-1855 across three oceans. Pirates, galleons, treasure fleets." />
+<meta property="og:url" content="https://austugal.github.io/shipwrecks/" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:creator" content="@itsshowtime4u" />
+<title>Age of Discoveries - Lost at Sea</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -52,8 +62,8 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
 /* DETAIL PANEL */
 #detail{position:fixed;top:0;right:-460px;width:440px;height:100%;z-index:950;background:linear-gradient(180deg,var(--parch) 0%,var(--navy) 100%);border-left:1px solid rgba(201,168,76,.2);transition:right .4s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:0 0 40px}
 #detail.open{right:0}
-#detail-close{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:14px 16px 0;background:linear-gradient(180deg,var(--parch) 60%,transparent)}
-#detail-close button{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:50%;width:30px;height:30px;color:var(--gold);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:.2s}
+#detail-close{position:sticky;top:0;z-index:9999;display:flex;justify-content:flex-end;padding:14px 16px 0;background:linear-gradient(180deg,var(--parch) 60%,transparent)}
+#detail-close button{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:50%;width:44px;height:44px;min-width:44px;min-height:44px;color:var(--gold);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:.2s;touch-action:manipulation}
 #detail-close button:hover{background:rgba(201,168,76,.2)}
 #detail-body{padding:0 22px 20px}
 #detail-flag{font-size:2.5rem;margin-bottom:4px}
@@ -155,14 +165,6 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
 .fleet-marker{background:rgba(139,26,26,.75);border:2px solid rgba(192,32,32,.7);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:.6rem;cursor:pointer;animation:fleet-pulse 2.2s ease-in-out infinite}
 .fleet-marker:hover{background:rgba(192,32,32,.9);transform:scale(1.25)}
 @keyframes fleet-pulse{0%,100%{box-shadow:0 0 0 0 rgba(192,32,32,.45)} 50%{box-shadow:0 0 0 9px rgba(192,32,32,0)}}
-/* WRECK OF THE DAY */
-@keyframes pulse-ring{0%{transform:translate(-50%,-50%) scale(.5);opacity:.9} 100%{transform:translate(-50%,-50%) scale(2.9);opacity:0}}
-.pulse-ring-outer,.pulse-ring-inner{width:44px;height:44px;border:2px solid rgba(201,168,76,.85);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
-.pulse-ring-outer{animation:pulse-ring 1.8s ease-out infinite}
-.pulse-ring-inner{border-color:rgba(201,168,76,.5);animation:pulse-ring 1.8s ease-out .65s infinite}
-.wotd-container{position:relative;width:44px;height:44px}
-#wotd-banner{position:fixed;top:94px;left:50%;transform:translateX(-50%);z-index:1100;background:rgba(10,22,40,.94);border:1px solid rgba(201,168,76,.38);border-radius:8px;padding:6px 20px;font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.16em;color:var(--gold2);pointer-events:none;opacity:0;transition:opacity .5s;white-space:nowrap}
-#wotd-banner.show{opacity:1}
 /* AUDIO TOGGLE */
 #audio-btn{position:fixed;bottom:68px;right:14px;z-index:900;background:rgba(10,22,40,.88);border:1px solid rgba(201,168,76,.2);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:.2s;backdrop-filter:blur(8px)}
 #audio-btn:hover{border-color:rgba(201,168,76,.5)}
@@ -185,14 +187,22 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
 #contact-close:hover{background:rgba(201,168,76,.18)}
 /* FILTERS adjusts down */
 #filters{top:96px!important}
-@media(max-width:600px){
+/* FILTER TOGGLE BUTTON (mobile only) */
+#filter-toggle{display:none;position:fixed;top:70px;left:16px;z-index:901;background:rgba(10,22,40,.88);border:1px solid rgba(201,168,76,.25);border-radius:8px;padding:0 14px;color:var(--gold2);font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.1em;cursor:pointer;min-height:44px;min-width:44px;backdrop-filter:blur(8px);align-items:center;gap:6px;touch-action:manipulation}
+@media(max-width:767px){
   #stats{display:none}
-  #filters{width:180px;padding:10px}
+  #filters{width:90vw;max-width:300px;padding:10px;display:none;top:120px!important}
+  #filters.mobile-open{display:block}
+  #filter-toggle{display:flex}
   #detail{width:100%;right:-100%}
   #detail.open{right:0}
   #footer-note{display:none}
   #timeline{display:none}
   #astrolabe-wrap{display:none!important}
+  #map{position:fixed;top:0;left:0;right:0;bottom:0}
+  .nav-btn,#resetBtn,#about-btn{min-height:44px}
+  #audio-btn{width:44px;height:44px}
+  #contact-btn{min-height:44px}
 }
 </style>
 </head>
@@ -200,7 +210,6 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
 <div id="progress-bar"></div>
 <div id="scanlines"></div>
 <svg id="grain" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#noise)" opacity="0.022"/></svg>
-<div id="wotd-banner"></div>
 <canvas id="waveCanvas"></canvas>
 <div id="map"></div>
 <div id="astrolabe-wrap"><canvas id="astrCanvas" width="160" height="160"></canvas></div>
@@ -232,6 +241,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
   </div>
 </div>
 
+<button id="filter-toggle" onclick="toggleFilters()" ontouchstart="toggleFilters()">&#9776; Filters</button>
 <div id="filters">
   <h3 data-i18n="filterTitle">Filter Wrecks</h3>
   <div id="search-wrap"><span id="search-icon">🔍</span><input type="text" id="f-search" placeholder="Search ship, captain, cargo…" data-i18n-placeholder="labelSearch"></div>
@@ -287,7 +297,7 @@ html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Inter'
 </div>
 
 <div id="detail">
-  <div id="detail-close"><button onclick="closeDetail()">✕</button></div>
+  <div id="detail-close"><button onclick="closeDetail()" ontouchstart="closeDetail()">✕</button></div>
   <div id="detail-body"></div>
 </div>
 
@@ -1036,6 +1046,7 @@ document.head.appendChild(s);
 // ═══════════════════════════════════════════════
 function openAbout() { document.getElementById('about-modal').classList.add('open'); }
 function closeAbout() { document.getElementById('about-modal').classList.remove('open'); }
+function toggleFilters() { document.getElementById('filters').classList.toggle('mobile-open'); }
 
 // ═══════════════════════════════════════════════
 //  WRECK CLICK SOUND EFFECTS
@@ -1352,20 +1363,6 @@ function toggleRoutes(){
     .bindTooltip(`<span style="font-family:'Cinzel',serif;font-size:.7rem;color:#e84040">${ev.name}</span><br><span style="font-size:.6rem;color:#a89870">Click to explore</span>`,{className:'wreck-tip'})
     .on('click',()=>{ map.flyToBounds(ev.bounds,{duration:1.2}); document.getElementById('f-flag').value=ev.flag; document.getElementById('f-era').value=ev.era; renderWrecks(); });
 });
-
-// ═══════════════════════════════════════════════
-//  WRECK OF THE DAY
-// ═══════════════════════════════════════════════
-(function initWOTD(){
-  const disc=WRECKS.filter(w=>w.status==='Discovered');
-  const seed=[...new Date().toDateString()].reduce((a,c)=>a+c.charCodeAt(0),0);
-  const wotd=disc[seed%disc.length];
-  const banner=document.getElementById('wotd-banner');
-  banner.textContent=`${t('wotdLabel')}: ${wotd.name}`;
-  setTimeout(()=>banner.classList.add('show'),800);
-  setTimeout(()=>banner.classList.remove('show'),5200);
-  setTimeout(()=>openDetail(wotd.id),3000);
-})();
 
 // ═══════════════════════════════════════════════
 //  INIT
